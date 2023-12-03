@@ -20,25 +20,66 @@ fn main() {
     let game_entries = game_record.lines().map(String::from).collect();
     let games = parse_games(&game_entries);
 
-    print_games(games);
+    let constraint_set = initialize_constraints();
+    let valid_games = filter_valid_games(games, &constraint_set);
+    let score = compute_score(&valid_games);
+    println!("{score}");
 }
 
-fn print_games(games: Vec<Game>) {
-    for game in games {
-        print!("Game ");
-        print!("{}:", game.game_id);
-        print!(" ");
+fn build_extraction(number: i32, color: &str) -> CubeExtraction {
+    CubeExtraction {
+        number_of_cubes: number,
+        type_of_cube: color.to_string(),
+    }
+}
 
-        for set in game.sets {
-            for extraction in set.extractions {
-                print!(
-                    "{} {} ",
-                    extraction.number_of_cubes, extraction.type_of_cube
-                );
+fn compute_score(valid_games: &Vec<Game>) -> i32 {
+    let mut total_score = 0;
+    for game in valid_games {
+        total_score += game.game_id;
+    }
+    return total_score;
+}
+
+fn initialize_constraints() -> CubeSet {
+    let mut extractions = Vec::new();
+    extractions.push(build_extraction(12, "red"));
+    extractions.push(build_extraction(14, "blue"));
+    extractions.push(build_extraction(13, "green"));
+
+    return CubeSet { extractions };
+}
+
+fn filter_valid_games(games: Vec<Game>, constraint_set: &CubeSet) -> Vec<Game> {
+    let mut valid_games: Vec<Game> = Vec::new();
+
+    for game in games {
+        let mut b_is_game_valid = true;
+        for set in &game.sets {
+            for extraction in &set.extractions {
+                b_is_game_valid &= is_extraction_valid(&extraction, &constraint_set);
             }
         }
-        println!("");
+        if b_is_game_valid {
+            valid_games.push(game);
+        }
     }
+    return valid_games;
+}
+
+fn is_extraction_valid(extraction: &CubeExtraction, constraint_set: &CubeSet) -> bool {
+    let mut b_is_extraction_valid = true;
+
+    for constraint in &constraint_set.extractions {
+        if extraction.type_of_cube != constraint.type_of_cube {
+            continue;
+        }
+
+        if extraction.number_of_cubes > constraint.number_of_cubes {
+            b_is_extraction_valid = false;
+        }
+    }
+    return b_is_extraction_valid;
 }
 
 fn parse_games(game_lines: &Vec<String>) -> Vec<Game> {
