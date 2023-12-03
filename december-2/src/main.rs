@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 
@@ -20,10 +21,55 @@ fn main() {
     let game_entries = game_record.lines().map(String::from).collect();
     let games = parse_games(&game_entries);
 
+    let mut total_power = 0;
+    for game in &games {
+        total_power += compute_set_power(&compute_minimum_set(game));
+    }
+    println!("{total_power}");
+
     let constraint_set = initialize_constraints();
     let valid_games = filter_valid_games(games, &constraint_set);
     let score = compute_score(&valid_games);
+
     println!("{score}");
+}
+
+fn compute_minimum_set(game: &Game) -> CubeSet {
+    let mut minimum_extractions_map: HashMap<String, i32> = HashMap::new();
+
+    minimum_extractions_map.insert("red".to_string(), 0);
+    minimum_extractions_map.insert("blue".to_string(), 0);
+    minimum_extractions_map.insert("green".to_string(), 0);
+
+    for set in &game.sets {
+        for extraction in &set.extractions {
+            let current_number = minimum_extractions_map[&extraction.type_of_cube];
+            if extraction.number_of_cubes > current_number {
+                if let Some(value) = minimum_extractions_map.get_mut(&extraction.type_of_cube) {
+                    *value = extraction.number_of_cubes;
+                }
+            }
+        }
+    }
+
+    let mut extractions: Vec<CubeExtraction> = Vec::new();
+
+    for key in minimum_extractions_map.keys() {
+        extractions.push(CubeExtraction {
+            number_of_cubes: minimum_extractions_map[key],
+            type_of_cube: key.to_string(),
+        })
+    }
+
+    return CubeSet { extractions };
+}
+
+fn compute_set_power(set: &CubeSet) -> i32 {
+    let mut power = 1;
+    for extraction in &set.extractions {
+        power *= extraction.number_of_cubes;
+    }
+    return power;
 }
 
 fn build_extraction(number: i32, color: &str) -> CubeExtraction {
