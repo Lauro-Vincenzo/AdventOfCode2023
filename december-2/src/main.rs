@@ -18,7 +18,7 @@ struct Game {
 fn main() {
     let game_record = read_file("input.txt");
     let game_entries = game_record.lines().map(String::from).collect();
-    let games = parse_games(&game_entries);
+    let _ = parse_games(&game_entries);
 }
 
 fn parse_games(game_lines: &Vec<String>) -> Vec<Game> {
@@ -29,7 +29,7 @@ fn parse_games(game_lines: &Vec<String>) -> Vec<Game> {
 
         let cube_sets = parse_cube_sets(&line);
 
-        let mut game = Game {
+        let game = Game {
             game_id: parsed_id,
             sets: cube_sets,
         };
@@ -41,7 +41,17 @@ fn parse_games(game_lines: &Vec<String>) -> Vec<Game> {
 }
 
 fn parse_cube_sets(game_entry: &String) -> Vec<CubeSet> {
-    let cube_sets: Vec<CubeSet> = Vec::new();
+    let mut cube_sets: Vec<CubeSet> = Vec::new();
+
+    let game_init_char_index = game_entry.find(':').unwrap();
+    let (_, cube_sets_substr) = game_entry.split_at(game_init_char_index);
+    let cube_set_entries: Vec<String> = cube_sets_substr.split(';').map(String::from).collect();
+
+    for cube_set_entry in cube_set_entries {
+        let cube_set = parse_cube_set(&cube_set_entry);
+        cube_sets.push(cube_set);
+    }
+
     return cube_sets;
 }
 
@@ -56,6 +66,32 @@ fn parse_game_id(game_entry: &String) -> i32 {
     return game_entry_id.parse::<i32>().expect("Conversion Failed!");
 }
 
+fn parse_cube_set(cube_set_entry: &String) -> CubeSet {
+    let cube_extractions_data: Vec<String> = cube_set_entry.split(',').map(String::from).collect();
+    let mut extractions: Vec<CubeExtraction> = Vec::new();
+
+    for cube_extraction_data in cube_extractions_data {
+        let whitespace_index = cube_extraction_data
+            .find(' ')
+            .expect("No whitespace found!");
+        println!("{cube_extraction_data}");
+        //println!("{whitespace_index}");
+
+        // let (number_of_cubes, type_of_cube) = cube_extraction_data.split_at(whitespace_index);
+
+        // println!("{number_of_cubes}");
+
+        // let cube_extraction = CubeExtraction {
+        //     number_of_cubes: number_of_cubes.parse::<i32>().expect("Conversion failed!"),
+        //     type_of_cube: type_of_cube.to_string(),
+        // };
+        // extractions.push(cube_extraction);
+    }
+
+    return CubeSet {
+        extractions: extractions,
+    };
+}
 fn read_file(path: &str) -> String {
     let mut file = File::open(path).expect("Unable to find file");
     let mut file_content = String::new();
