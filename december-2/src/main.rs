@@ -37,6 +37,7 @@ fn print_games(games: Vec<Game>) {
                 );
             }
         }
+        println!("");
     }
 }
 
