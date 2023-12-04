@@ -12,6 +12,9 @@ lazy_static! {
         symbols.push("=".to_string());
         symbols.push("/".to_string());
         symbols.push("$".to_string());
+        symbols.push("%".to_string());
+        symbols.push("-".to_string());
+        symbols.push("&".to_string());
         symbols
     };
     static ref DIGITS: Vec<char> = {
@@ -40,13 +43,17 @@ fn main() {
     let engine_schematic = read_file("input.txt");
     let schematic_rows: Vec<String> = engine_schematic.lines().map(String::from).collect();
 
+    let mut numbers: Vec<i32> = Vec::new();
+
     let mut part_number_sum = 0;
     for row in &schematic_rows {
         let part_numbers_in_line = find_part_numbers_in_line(&row, &schematic_rows);
+        numbers.extend(&part_numbers_in_line);
         let part_number_line_sum: i32 = part_numbers_in_line.iter().sum();
         part_number_sum += part_number_line_sum;
     }
 
+    numbers;
     println!("{part_number_sum}");
 }
 
@@ -69,7 +76,7 @@ fn find_numbers_in_line(line: &String) -> Vec<String> {
 }
 
 fn find_part_numbers_in_line(row: &String, schematic: &Vec<String>) -> Vec<i32> {
-    let numbers_str: Vec<String> = find_numbers_in_line(&row);
+    let mut numbers_str: Vec<String> = find_numbers_in_line(&row);
     let mut numbers: Vec<i32> = Vec::new();
 
     let row_number = match schematic.iter().position(|x| x == row) {
@@ -77,16 +84,24 @@ fn find_part_numbers_in_line(row: &String, schematic: &Vec<String>) -> Vec<i32> 
         None => panic!("Row not found!"),
     };
 
-    for number in numbers_str {
-        let number_position = NumberPositionInfo {
-            line: row_number,
-            first_char_index: row.find(&number).unwrap(),
-            size: number.len(),
-        };
+    numbers_str.sort();
+    numbers_str.dedup();
 
-        let b_is_part_number = is_part_number(&number_position, &schematic);
-        if b_is_part_number {
-            numbers.push(number.parse::<i32>().expect("Conversion Failed!"));
+    for number in numbers_str {
+        let number_first_char_positions: Vec<usize> =
+            row.match_indices(&number).map(|(index, _)| index).collect();
+
+        for first_char_position in number_first_char_positions {
+            let number_position = NumberPositionInfo {
+                line: row_number,
+                first_char_index: first_char_position,
+                size: number.len(),
+            };
+
+            let b_is_part_number = is_part_number(&number_position, &schematic);
+            if b_is_part_number {
+                numbers.push(number.parse::<i32>().expect("Conversion Failed!"));
+            }
         }
     }
 
@@ -96,13 +111,19 @@ fn find_part_numbers_in_line(row: &String, schematic: &Vec<String>) -> Vec<i32> 
 fn is_part_number(position: &NumberPositionInfo, schematic: &Vec<String>) -> bool {
     let mut b_is_part_number = is_near_to_symbol_horiz(&position, &schematic);
 
-    b_is_part_number &= is_near_to_symbol_vert(&position, &schematic);
+    b_is_part_number |= is_near_to_symbol_vert(&position, &schematic);
     return b_is_part_number;
 }
 
 fn is_near_to_symbol_horiz(position: &NumberPositionInfo, schematic: &Vec<String>) -> bool {
     let line = &schematic[position.line];
-    let symbol_left = match line.chars().nth(position.first_char_index - 1) {
+
+    let left_symbol_index = match position.first_char_index.checked_sub(1) {
+        Some(value) => value,
+        None => usize::MAX,
+    };
+
+    let symbol_left = match line.chars().nth(left_symbol_index) {
         Some(value) => value,
         None => '\0',
     };
@@ -118,25 +139,31 @@ fn is_near_to_symbol_horiz(position: &NumberPositionInfo, schematic: &Vec<String
     // println!(" b_left {b_left}");
     // println!("right {symbol_right}");
     // println!("b_right {b_right}");
-    return b_left && b_right;
+    return b_left || b_right;
 }
 fn is_near_to_symbol_vert(position: &NumberPositionInfo, schematic: &Vec<String>) -> bool {
     let mut b_is_near_symbol = false;
 
-    let upper_line = schematic
-        .get(position.line - 1)
-        .cloned()
-        .unwrap_or_else(String::new);
-    let lower_line = schematic
-        .get(position.line + 1)
-        .cloned()
-        .unwrap_or_else(String::new);
+    let upper_line_index: usize = match position.line.checked_sub(1) {
+        Some(value) => value,
+        None => usize::MAX,
+    };
+
+    let upper_line = match schematic.get(upper_line_index) {
+        Some(string) => string,
+        None => "",
+    };
+
+    let lower_line = match schematic.get(position.line + 1) {
+        Some(string) => string,
+        None => "",
+    };
 
     if !upper_line.is_empty() {
-        b_is_near_symbol = contains_symbol_near(&position, &upper_line.to_string());
+        b_is_near_symbol |= contains_symbol_near(&position, &upper_line.to_string());
     }
     if !lower_line.is_empty() {
-        b_is_near_symbol = contains_symbol_near(&position, &lower_line.to_string());
+        b_is_near_symbol |= contains_symbol_near(&position, &lower_line.to_string());
     }
 
     return b_is_near_symbol;
@@ -144,15 +171,22 @@ fn is_near_to_symbol_vert(position: &NumberPositionInfo, schematic: &Vec<String>
 
 fn contains_symbol_near(position: &NumberPositionInfo, line: &String) -> bool {
     let mut b_is_near_symbol = false;
-    let leftward_index = position.first_char_index - 1;
+    let leftward_index = match position.first_char_index.checked_sub(1) {
+        Some(value) => value,
+        None => 0,
+    };
+
     let rightward_index = position.first_char_index + position.size + 1;
 
-    let sliced = &line[leftward_index..rightward_index];
-    for c in sliced.chars() {
-        if SYMBOLS.contains(&c.to_string()) {
-            b_is_near_symbol = true;
+    if leftward_index != usize::MAX {
+        let sliced = &line[leftward_index..rightward_index];
+        for c in sliced.chars() {
+            if SYMBOLS.contains(&c.to_string()) {
+                b_is_near_symbol = true;
+            }
         }
     }
+
     return b_is_near_symbol;
 }
 
