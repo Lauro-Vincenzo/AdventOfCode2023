@@ -1,16 +1,14 @@
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 
-struct MapEntry {
-    destination_range_start: u32,
-    source_range_start: u32,
-    range_size: u32,
+struct MapRule {
+    destination_start: u64,
+    source_start: u64,
+    range_size: u64,
 }
 
 struct ConversionMap {
-    _map_name: String,
-    map: HashMap<u32, u32>,
+    map_rules: Vec<MapRule>
 }
 
 fn main() {
@@ -18,31 +16,47 @@ fn main() {
 
     let seeds = extract_seeds(&input_info);
     let map_pile = extract_maps_info(&input_info);
-    //
+
     let map_infos = split_maps(&map_pile);
     let maps = parse_maps_info(&map_infos);
-    //
-    // let mut outputs : Vec<u32> = Vec::new();
-    //
-    // for seed in seeds {
-    //     outputs.push(traverse_maps(seed, &maps));
-    // }
-    //
-    // outputs.sort();
-    // println!("{}", outputs[0]);
+
+    let mut outputs : Vec<u64> = Vec::new();
+
+    for seed in seeds {
+         outputs.push(traverse_maps(seed, &maps));
+    }
+
+    outputs.sort();
+    println!("{}", outputs[0]);
 }
 
-fn traverse_maps(input_value : u32, maps: &Vec<ConversionMap>) -> u32{
+fn traverse_maps(input_value : u64, maps: &Vec<ConversionMap>) -> u64{
     let mut current_value = input_value;
 
     for map in maps {
-        current_value = map.map[&current_value];
+        current_value = convert_key(&map, current_value);
     }
 
     return current_value;
 }
 
-fn extract_seeds(input_info: &String) -> Vec<u32> {
+fn convert_key(map : &ConversionMap, key : u64) -> u64{
+    let mut value = key;
+    for rule in &map.map_rules{
+        if is_in_range(value, rule.source_start, rule.range_size){
+            let diff = value - rule.source_start;
+            assert!(diff >= 0);
+            value = rule.destination_start+diff;
+            break;
+        }
+    }
+    return value;
+}
+
+fn is_in_range(value: u64, start: u64, range: u64) -> bool {
+   return start <= value && value <= start+range;
+}
+fn extract_seeds(input_info: &String) -> Vec<u64> {
     let first_line = input_info.lines().next().unwrap_or("");
     let delimiter_index = first_line.find(':').expect("Delimiter not found");
     let seeds_numbers_str: String = first_line[delimiter_index + 1..].to_string();
@@ -52,9 +66,9 @@ fn extract_seeds(input_info: &String) -> Vec<u32> {
         .into_iter()
         .map(String::from)
         .collect();
-    let seeds: Vec<u32> = numbers_str
+    let seeds: Vec<u64> = numbers_str
         .iter()
-        .map(|s| s.parse::<u32>().expect("Conversion Failed"))
+        .map(|s| s.parse::<u64>().expect("Conversion Failed"))
         .collect();
 
     return seeds;
@@ -94,41 +108,25 @@ fn split_maps(map_pile: &String) -> Vec<String> {
     return map_infos;
 }
 
-fn initialize_custom_map(entries: &Vec<MapEntry>) -> HashMap<u32, u32> {
-    let mut custom_map = HashMap::new();
-
-    for entry in entries {
-        for i in 0..entry.range_size {
-            custom_map.insert(
-                entry.source_range_start + i,
-                entry.destination_range_start + i,
-            );
-        }
-    }
-
-    return custom_map;
-}
-
 fn parse_maps_info(map_infos: &Vec<String>) -> Vec<ConversionMap> {
     let mut conversion_maps = Vec::new();
 
     for entry in map_infos {
         let mut entry_lines = entry.lines();
-        let _map_name = entry_lines.next().unwrap_or_default().to_string();
+        let _ = entry_lines.next().unwrap_or_default().to_string();
         let map_entry: String = entry_lines.collect::<Vec<&str>>().join("\n");
 
         let map_entries = parse_map_entries(&map_entry);
 
-        let map_custom = initialize_custom_map(&map_entries);
-        let map: HashMap<u32, u32> = fill_default_keys(&map_custom);
-
-        conversion_maps.push(ConversionMap { _map_name, map });
+        conversion_maps.push(ConversionMap {
+            map_rules: map_entries,
+        });
     }
 
     return conversion_maps;
 }
 
-fn parse_map_entries(entries_str: &String) -> Vec<MapEntry> {
+fn parse_map_entries(entries_str: &String) -> Vec<MapRule> {
     let mut maps_entry = Vec::new();
 
     for line in entries_str.lines() {
@@ -137,32 +135,19 @@ fn parse_map_entries(entries_str: &String) -> Vec<MapEntry> {
             .into_iter()
             .map(String::from)
             .collect();
-        let numbers: Vec<u32> = numbers_str
+        let numbers: Vec<u64> = numbers_str
             .iter()
-            .map(|s| s.parse::<u32>().expect("Conversion Failed"))
+            .map(|s| s.parse::<u64>().expect("Conversion Failed"))
             .collect();
         assert_eq!(numbers.len(), 3);
-        maps_entry.push(MapEntry {
-            destination_range_start: numbers[0],
-            source_range_start: numbers[1],
+        maps_entry.push(MapRule {
+            destination_start: numbers[0],
+            source_start: numbers[1],
             range_size: numbers[2],
         })
     }
 
     return maps_entry;
-}
-
-fn fill_default_keys(input_map: &HashMap<u32, u32>) -> HashMap<u32, u32> {
-    let mut output_map = input_map.clone();
-
-    for key in 0..100 {
-        if input_map.contains_key(&key) {
-            continue;
-        }
-        output_map.insert(key, key);
-    }
-
-    return output_map;
 }
 
 fn read_file(path: &str) -> String {
