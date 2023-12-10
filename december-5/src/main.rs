@@ -66,10 +66,25 @@ fn extract_seeds(input_info: &String) -> Vec<u64> {
         .into_iter()
         .map(String::from)
         .collect();
-    let seeds: Vec<u64> = numbers_str
-        .iter()
-        .map(|s| s.parse::<u64>().expect("Conversion Failed"))
-        .collect();
+    let mut seeds= Vec::new();
+
+    for entry_index in 0..numbers_str.len(){
+        println!("Extracting batch number: {}", entry_index);
+
+        if entry_index == numbers_str.len(){
+            break;
+        }
+
+        if(entry_index % 2 == 0){
+            let start = numbers_str[entry_index].parse::<u64>().expect("Conversion Failed");
+            let range =  numbers_str[entry_index+1].parse::<u64>().expect("Conversion Failed");
+            for i in 0..range{
+                seeds.push(start+i);
+            }
+
+        }
+        println!("Extraction Ended.");
+    }
 
     return seeds;
 }
