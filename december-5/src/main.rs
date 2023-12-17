@@ -1,5 +1,6 @@
-use std::fs::File;
-use std::io::Read;
+use std::fs::{File, OpenOptions};
+use std::io::{Read,Write};
+use std::ops::Index;
 
 struct MapRule {
     destination_start: u64,
@@ -8,26 +9,23 @@ struct MapRule {
 }
 
 struct ConversionMap {
+    name : String,
     map_rules: Vec<MapRule>
 }
 
 fn main() {
     let input_info = read_file("input.txt");
 
-    let seeds = extract_seeds(&input_info);
     let map_pile = extract_maps_info(&input_info);
-
     let map_infos = split_maps(&map_pile);
+    //println!("Map info numbers: {}", map_infos.len());
+
     let maps = parse_maps_info(&map_infos);
+    //println!("Map numbers: {}", maps.len());
 
-    let mut outputs : Vec<u64> = Vec::new();
+    let minimum_value = extract_seeds(&input_info, &maps);
 
-    for seed in seeds {
-         outputs.push(traverse_maps(seed, &maps));
-    }
-
-    outputs.sort();
-    println!("{}", outputs[0]);
+    println!("{}", minimum_value);
 }
 
 fn traverse_maps(input_value : u64, maps: &Vec<ConversionMap>) -> u64{
@@ -42,6 +40,7 @@ fn traverse_maps(input_value : u64, maps: &Vec<ConversionMap>) -> u64{
 
 fn convert_key(map : &ConversionMap, key : u64) -> u64{
     let mut value = key;
+    let mut index = 0;
     for rule in &map.map_rules{
         if is_in_range(value, rule.source_start, rule.range_size){
             let diff = value - rule.source_start;
@@ -49,44 +48,56 @@ fn convert_key(map : &ConversionMap, key : u64) -> u64{
             value = rule.destination_start+diff;
             break;
         }
+        index += 1;
     }
+    //println!("Converting {} in {} using rule {} of map {}", key, value, index ,map.name);
     return value;
 }
 
 fn is_in_range(value: u64, start: u64, range: u64) -> bool {
    return start <= value && value <= start+range;
 }
-fn extract_seeds(input_info: &String) -> Vec<u64> {
+fn extract_seeds(input_info: &String, maps: &Vec<ConversionMap>) -> u64{
     let first_line = input_info.lines().next().unwrap_or("");
     let delimiter_index = first_line.find(':').expect("Delimiter not found");
     let seeds_numbers_str: String = first_line[delimiter_index + 1..].to_string();
+    let mut minimum_value = u64::MAX;
+    let mut number_of_entries = 0;
+    let mut actual_entries : u64 = 0;
 
     let numbers_str: Vec<String> = seeds_numbers_str.trim()
         .split_whitespace()
         .into_iter()
         .map(String::from)
         .collect();
-    let mut seeds= Vec::new();
 
     for entry_index in 0..numbers_str.len(){
-        println!("Extracting batch number: {}", entry_index);
+        if entry_index % 2 == 0 {
+            //println!("Extracting batch number: {}", entry_index);
 
-        if entry_index == numbers_str.len(){
-            break;
-        }
+            let start =  numbers_str[entry_index].parse::<u64>().expect("Conversion Failed");
+            //println!("start: {}", start);
 
-        if(entry_index % 2 == 0){
-            let start = numbers_str[entry_index].parse::<u64>().expect("Conversion Failed");
             let range =  numbers_str[entry_index+1].parse::<u64>().expect("Conversion Failed");
+            //println!("range: {}", range);
+
+            number_of_entries += range;
+
             for i in 0..range{
-                seeds.push(start+i);
+                let ouput_value = traverse_maps(i+start, maps);
+                actual_entries += 1;
+
+                if minimum_value > ouput_value{
+                    minimum_value = ouput_value;
+                    //println!("{minimum_value}");
+                }
             }
-
+            //println!("Number of entries: {}", number_of_entries);
+            //println!("Actual Entries: {}", actual_entries);
         }
-        println!("Extraction Ended.");
+        //println!("Extraction Ended.");
     }
-
-    return seeds;
+    return minimum_value;
 }
 
 fn extract_maps_info(input_info: &String) -> String {
@@ -128,12 +139,14 @@ fn parse_maps_info(map_infos: &Vec<String>) -> Vec<ConversionMap> {
 
     for entry in map_infos {
         let mut entry_lines = entry.lines();
-        let _ = entry_lines.next().unwrap_or_default().to_string();
+        let name = entry_lines.next().unwrap_or_default().to_string();
         let map_entry: String = entry_lines.collect::<Vec<&str>>().join("\n");
 
         let map_entries = parse_map_entries(&map_entry);
+        //println!("Map entries number: {}", map_entries.len());
 
         conversion_maps.push(ConversionMap {
+            name,
             map_rules: map_entries,
         });
     }
