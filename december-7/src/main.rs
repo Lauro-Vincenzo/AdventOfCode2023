@@ -1,18 +1,13 @@
+use crate::cards::Card;
 use strman;
 
-struct Card{
-    value : i32
-}
-
-struct Hand{
-    cards : Vec<Card>
-}
+mod cards;
 
 fn main() {
     strman::read_file("input.txt");
 }
 
-fn parse_card(read_char : char) -> Card{
+fn parse_card(read_char: char) -> Card {
     let value = match read_char {
         'A' => 14,
         'K' => 13,
@@ -28,16 +23,7 @@ fn parse_card(read_char : char) -> Card{
         '3' => 3,
         '2' => 2,
         '1' => 1,
-        _ => panic!("Wrong character found!")
+        _ => panic!("Wrong character found!"),
     };
-    return Card{value};
-}
- 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-    }
+    return Card { value };
 }
