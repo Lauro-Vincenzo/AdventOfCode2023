@@ -14,7 +14,7 @@ pub enum HandPoint {
 
 #[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Copy)]
 pub struct Card {
-    pub value: i32,
+    pub value: u32,
 }
 
 pub struct Hand {
@@ -22,11 +22,26 @@ pub struct Hand {
 }
 
 impl Hand {
+    pub fn compute_score(&self) -> u32{
+        let main_score = match Self::compute_point(self){
+            HandPoint::HighCard  => 100,
+            HandPoint::Pair  => 200,
+            HandPoint::TwoPairs  => 300,
+            HandPoint::ThreeOfAKind  => 400,
+            HandPoint::FullHouse  => 500,
+            HandPoint::FourOfAKind  => 600,
+            HandPoint::FiveOfAKind => 700,
+        };
+
+        let added_score = self.cards.get(0).expect("No cards in hand!").value;
+        main_score + added_score
+    }
+
     pub fn compute_point(&self) -> HandPoint {
         let point = HandPoint::HighCard;
 
-        let unique_cards_number = Hand::get_unique_cards_number(&self.cards);
-        let max_card_occurence = Hand::get_max_same_card_occurrencies(&self.cards);
+        let unique_cards_number = Self::get_unique_cards_number(&self.cards);
+        let max_card_occurence = Self::get_max_same_card_occurrencies(&self.cards);
 
         let point: HandPoint = match unique_cards_number {
             1 => HandPoint::FiveOfAKind,
