@@ -1,5 +1,7 @@
-use std::cmp;
-use std::cmp::Ordering;
+use std::ops::Div;
+
+
+
 
 #[derive(Eq, PartialEq, PartialOrd, Ord, Debug)]
 pub enum HandPoint {
@@ -18,11 +20,11 @@ pub struct Card {
 }
 
 pub struct Hand {
-    cards: Vec<Card>,
+    pub cards: Vec<Card>,
 }
 
 impl Hand {
-    pub fn compute_score(&self) -> u32{
+    pub fn compute_score(&self) -> f64{
         let main_score = match Self::compute_point(self){
             HandPoint::HighCard  => 100,
             HandPoint::Pair  => 200,
@@ -33,12 +35,17 @@ impl Hand {
             HandPoint::FiveOfAKind => 700,
         };
 
-        let added_score = self.cards.get(0).expect("No cards in hand!").value;
-        main_score + added_score
+        let mut added_score : f64 = 0.0;
+        let mut position_multiplier = 1.0;
+        for card in &self.cards{
+            added_score = added_score + card.value as f64 * position_multiplier;
+            position_multiplier = position_multiplier.div(15.0);
+        }
+        main_score as f64 + added_score
     }
 
     pub fn compute_point(&self) -> HandPoint {
-        let point = HandPoint::HighCard;
+        let _point = HandPoint::HighCard;
 
         let unique_cards_number = Self::get_unique_cards_number(&self.cards);
         let max_card_occurence = Self::get_max_same_card_occurrencies(&self.cards);
@@ -64,20 +71,20 @@ impl Hand {
             _ => panic!("Found no point!"),
         };
 
-        return point;
+        point
     }
 
     fn get_max_same_card_occurrencies(cards: &Vec<Card>) -> i32 {
         let mut max_occurrence = 0;
 
         for card in cards {
-            let occurence = cards.into_iter().filter(|&x| x == card).count();
+            let occurence = cards.iter().filter(|&x| x == card).count();
             if occurence > max_occurrence {
                 max_occurrence = occurence;
             }
         }
 
-        return i32::try_from(max_occurrence).expect("Conversion Failed!");
+        i32::try_from(max_occurrence).expect("Conversion Failed!")
     }
 
     fn get_unique_cards_number(cards: &Vec<Card>) -> i32 {
@@ -86,7 +93,7 @@ impl Hand {
         unique_cards.sort();
         unique_cards.dedup();
 
-        return i32::try_from(unique_cards.len()).expect("Conversion Failed!");
+        i32::try_from(unique_cards.len()).expect("Conversion Failed!")
     }
 }
 
