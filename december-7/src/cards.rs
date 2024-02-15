@@ -1,8 +1,5 @@
 use std::ops::Div;
 
-
-
-
 #[derive(Eq, PartialEq, PartialOrd, Ord, Debug)]
 pub enum HandPoint {
     HighCard,
@@ -88,12 +85,19 @@ impl Hand {
     }
 
     fn get_unique_cards_number(cards: &Vec<Card>) -> i32 {
-        let mut unique_cards = cards.clone();
-
-        unique_cards.sort();
-        unique_cards.dedup();
-
-        i32::try_from(unique_cards.len()).expect("Conversion Failed!")
+        for card_index in 0..5{
+            println!("Main card index {}", card_index);
+            let mut current_card_index : i32 = 0;
+            for card in cards{
+                if current_card_index == card_index {
+                    current_card_index = current_card_index + 1;
+                    continue;
+                }
+                println!("Checking card {} against {}", card_index, current_card_index);
+                current_card_index = current_card_index + 1;
+            }
+        }
+        todo!();
     }
 }
 
