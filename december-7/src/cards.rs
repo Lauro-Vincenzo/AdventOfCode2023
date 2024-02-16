@@ -1,4 +1,4 @@
-use std::ops::Div;
+use std::{ops::Div, vec};
 
 #[derive(Eq, PartialEq, PartialOrd, Ord, Debug)]
 pub enum HandPoint {
@@ -36,68 +36,69 @@ impl Hand {
         let mut position_multiplier = 1.0;
         for card in &self.cards{
             added_score = added_score + card.value as f64 * position_multiplier;
-            position_multiplier = position_multiplier.div(15.0);
+            position_multiplier = position_multiplier.div(100.0);
         }
         main_score as f64 + added_score
+    }
+
+    pub fn compute_cards_repetitions(cards: &Vec<Card>) -> Vec<i32>{
+        let mut unique_cards = cards.clone();
+        
+        let jokers = cards.iter().filter(|&x| x.value == 1).count();
+        //println!("Jokers are {jokers}");
+
+        unique_cards.sort();
+        unique_cards.dedup();
+        let unique_cards = unique_cards;
+        let mut repetitions = vec![];
+        for unique_card in unique_cards {
+            if unique_card.value == 1{
+                continue;
+            }
+            let occurence = cards.iter().filter(|&x| x == &unique_card).count();
+            let total_occurrences = jokers + occurence;
+            repetitions.push(total_occurrences as i32);
+        }
+
+        // handle 5 J case
+        if repetitions.is_empty() {
+            repetitions.push(5);
+        }
+        repetitions.sort();
+        repetitions.reverse();
+        //println!("Rep is {:?}", repetitions);
+
+        repetitions
     }
 
     pub fn compute_point(&self) -> HandPoint {
         let _point = HandPoint::HighCard;
 
-        let unique_cards_number = Self::get_unique_cards_number(&self.cards);
-        let max_card_occurence = Self::get_max_same_card_occurrencies(&self.cards);
-
-        let point: HandPoint = match unique_cards_number {
-            1 => HandPoint::FiveOfAKind,
+        let card_repetitions : Vec<i32> = Self::compute_cards_repetitions(&self.cards);
+        
+        let point: HandPoint = match card_repetitions[0] {
+            1 => HandPoint::HighCard,
             2 => {
-                if max_card_occurence == 4 {
-                    HandPoint::FourOfAKind
+                if card_repetitions[1] == 2 {
+                    HandPoint::TwoPairs
                 } else {
-                    HandPoint::FullHouse
+                    HandPoint::Pair
                 }
             }
             3 => {
-                if max_card_occurence == 3 {
-                    HandPoint::ThreeOfAKind
+                if card_repetitions.contains(&2){
+                    HandPoint::FullHouse
                 } else {
-                    HandPoint::TwoPairs
+                    HandPoint::ThreeOfAKind
                 }
             }
-            4 => HandPoint::Pair,
-            5 => HandPoint::HighCard,
+            4 => HandPoint::FourOfAKind,
+            5 => HandPoint::FiveOfAKind,
             _ => panic!("Found no point!"),
         };
 
+        println!("Point is {:?}", point);
         point
-    }
-
-    fn get_max_same_card_occurrencies(cards: &Vec<Card>) -> i32 {
-        let mut max_occurrence = 0;
-
-        for card in cards {
-            let occurence = cards.iter().filter(|&x| x == card).count();
-            if occurence > max_occurrence {
-                max_occurrence = occurence;
-            }
-        }
-
-        i32::try_from(max_occurrence).expect("Conversion Failed!")
-    }
-
-    fn get_unique_cards_number(cards: &Vec<Card>) -> i32 {
-        for card_index in 0..5{
-            println!("Main card index {}", card_index);
-            let mut current_card_index : i32 = 0;
-            for card in cards{
-                if current_card_index == card_index {
-                    current_card_index = current_card_index + 1;
-                    continue;
-                }
-                println!("Checking card {} against {}", card_index, current_card_index);
-                current_card_index = current_card_index + 1;
-            }
-        }
-        todo!();
     }
 }
 
