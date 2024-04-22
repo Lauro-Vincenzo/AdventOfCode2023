@@ -31,8 +31,33 @@ fn main() {
 }
 
 fn generate_routes(routes_str : Vec<String>) -> HashMap<String, Route>{
+    let mut routes : HashMap<String, Route> = HashMap::new();
     for (index, route_str) in routes_str.iter().enumerate() {
+        if route_str.is_empty(){
+            continue;
+        }
+
+        // Debug
+        if (index > 1){
+            continue;
+        }
+
         println!("Debug: Element at position {}: {:?}", &index, &route_str);
+
+        let mut split_route : Vec<String> = route_str.split_whitespace().map(String::from).collect();
+        split_route.retain(|element| !element.is_empty());
+        let split_route = split_route;
+        //assert!(split_route.len() == 3, "Route string is not well formatted");
+
+        //routes.insert(split_route[0].clone(), Route{leftEnd: split_route[1].clone(), rightEnd: split_route[2].clone()});
+
+        for element in split_route.iter(){
+            let clean_split_element = strman::remove_blacklist_chars(element.to_string(), vec!['(', ')', ',', '=', ' ']);
+            println!("Debug: {:?}", clean_split_element);
+        }
+
+        // Parse the route string
+
     }
 
     todo!()

@@ -9,6 +9,16 @@ pub fn read_file(path: &str) -> String {
     file_content
 }
 
+pub fn remove_blacklist_chars(text: String, blacklist : Vec<char>) -> String {
+    let mut result = String::new();
+    for c in text.chars() {
+        if !blacklist.contains(&c) {
+            result.push(c);
+        }
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     
